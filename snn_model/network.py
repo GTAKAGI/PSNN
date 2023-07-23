@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import snntorch
+# import snntorch
 import pandas as pd
 import tqdm
 import argparse
@@ -31,26 +31,29 @@ class SNN_Net(torch.nn.Module):
         # self.l4 = p_snu_layer.P_SNU(hidden_num, outputs_num, l_tau = l_tau, soft = soft, gpu = gpu)
         
         #my2 hidden num = 4
-        self.l1 = p_snu_layer.P_SNU(inputs_num, hidden_num, l_tau = l_tau, soft = soft, gpu = gpu)
-        self.l2 = p_snu_layer.P_SNU(hidden_num, hidden_num, l_tau = l_tau, soft = soft, gpu = gpu)
-        self.l3 = p_snu_layer.P_SNU(hidden_num, outputs_num, l_tau = l_tau, soft = soft, gpu = gpu)
+        # self.l1 = p_snu_layer.P_SNU(inputs_num, hidden_num, l_tau = l_tau, soft = soft, gpu = gpu)
+        # self.l2 = p_snu_layer.P_SNU(hidden_num, hidden_num, l_tau = l_tau, soft = soft, gpu = gpu)
+        # self.l3 = p_snu_layer.P_SNU(hidden_num, outputs_num, l_tau = l_tau, soft = soft, gpu = gpu)
+        # self.l4 = p_snu_layer.P_SNU(inputs_num, outputs_num, l_tau = l_tau, soft = soft, gpu = gpu)
         
         # for 1 layer test
         self.l4 = p_snu_layer.P_SNU(inputs_num, outputs_num, l_tau = l_tau, soft = soft, gpu = gpu)
         
     def reset_state(self):
-        self.l1.reset_state()
-        self.l2.reset_state()
-        self.l3.reset_state()
+        # self.l1.reset_state()
+        # self.l2.reset_state()
+        # self.l3.reset_state()
         self.l4.reset_state()
     
     def forward(self,x,y):
-        y = torch.tensor(y)
+        # y = torch.tensor(y)
         losse = None
         accuracy = None
         sum_out = None #タイムステップ毎のスパイク数の累積をとる
-        out_list = [] #各データ(120×4)のタイムステップ(100ms)における出力スパイクを合計したものを時系列で挿入
+        out_list = [] #各データ(120×4)のタイムステップ(100ms)における出力スパイクを時系列で挿入
         out_total_list = []
+        membrane_out = torch.empty(100,3)
+        spikes_ = torch.empty(100,3)
         
         self.reset_state()
         
@@ -66,32 +69,26 @@ class SNN_Net(torch.nn.Module):
             
             #4→4→3(network)
             spike_encoded_neuron = x[time]
-            #h1 = self.l1(spike_encoded_neuron)
-            #h2 = self.l2(h1)
-            #out = self.l3(h2)
+            # h1 = self.l1(spike_encoded_neuron)
+            # h2 = self.l2(h1)
+            # out = self.l3(h2)
             
             # 1 layer test 
-            out = self.l4(spike_encoded_neuron)
-            
-            # out = self.l3(h2)[0]
-            
-            #タイムステップ毎の出力スパイク列を合算(Nru(last,time) += Nru(last,time-1))
-            sum_out = out if sum_out is None else sum_out + out
-            out_list.append(out)
-        
-        #shape y corresponds to (1,3) that match inputs out
+            out,thresh,spike = self.l4(spike_encoded_neuron)
 
+            sum_out = out if sum_out is None else sum_out + out
+            membrane_out[time] = out
+            spikes_[time] = spike
+        
         #出力を確認する
         # return sum_out,y
         
         #バッチ学習の場合
-        criterion = nn.CrossEntropyLoss()
-        losse = criterion(sum_out,y)
-        predicted_label = sum_out.argmax()
-        accuracy = 1 if predicted_label == y else 0
-        # accuracy = out/y
+        # criterion = nn.CrossEntropyLoss()
+        # losse = criterion(sum_out,y)
+
+        #正解率
+        # predicted_label = sum_out.argmax()
+        # accuracy = 1 if predicted_label == y else 0
         
-        # criterion = nn.MSELoss()
-        # loss = criterion(out,y)
-        
-        return sum_out,None,losse,accuracy
+        return membrane_out,thresh,spikes_

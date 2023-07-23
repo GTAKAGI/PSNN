@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import torch
 import torch.utils.data
 import torch.nn as nn
-import snntorch
+# import snntorch
 import pandas as pd
 from tqdm import tqdm
 import argparse
@@ -12,52 +12,9 @@ from sklearn import datasets
 from snn_model import network
 from snn_model import p_snu_layer
 
-##(6/20)classで自動変換モジュールを作ってみたが、データセットを分割できないのでやっぱやめる。
-# class LoadDataset(torch.utils.data.Dataset):
-#     def __init__(self, num_data = 150, dt = 1e-3, num_time = 100, freq = 30,norm = 30):
-#         super().__init__()
-        
-#         Data = datasets.load_iris()
-#         inputs = Data.data
-#         label = Data.target
-#         input_data = np.zeros((num_data, num_time, 4))
-#         output_data = np.zeros(num_data)
-#         for k in tqdm(range(num_data)):
-#             freq_temp = freq*norm/np.sum(inputs[k])
-#             fr = freq_temp * np.repeat(np.expand_dims((inputs[k]),axis= 0), num_time, axis = 0)
-#             input_data[k] = np.where(np.random.rand(num_time , 4) < fr*dt, 1, 0)
-#             output_data[k] = label[k]
-            
-#         self.input_data = input_data.astype(np.float32)
-#         self.output_data = output_data.astype(np.int8)
-#         self.num_data = num_data
-        
-#     def __len__(self):
-#         return self.num_data
-    
-#     def __getitem__(self, index):
-#         return self.input_data[index],self.output_data[index]
-    
-# dataset = LoadDataset(num_data=150,dt = 1e-3,num_time=100,freq = 30)
-# # print(dataset[:5][:].shape)
-# train = dataset[:40][:],dataset[50:90][:],dataset[100:140][:]
-# print(train)
-
-#実データセットに分ける(教師ラベルも同時にやる)
+#教師ラベル
 df = pd.read_csv('iris.data', header=None)
 y = df.iloc[0:150,4].values 
-y_label = []
-# y_label = np.empty((150,3))#one-hot
-for i in range(len(y)):
-    if y[i] == 'Iris-setosa':
-        y_label.append([0])
-        # y_label[i] = np.array([1,0,0])
-    elif y[i] == 'Iris-versicolor':
-        y_label.append([1])
-        # y_label[i] = np.array([0,1,0])
-    else:
-        y_label.append([2])
-        # y_label[i] = np.array([0,0,1])
 y_train = []
 y_eval = []
 #教師ラベル
@@ -68,6 +25,7 @@ for i in range(120):
         y_train.append([1])
     if 80 <= i:
         y_train.append([2])
+y_train = torch.tensor(y_train)
 #正解ラベル
 for i in range(30):
     if 0 <= i <= 9:
@@ -78,22 +36,13 @@ for i in range(30):
         y_eval.append([2])
 y_eval = torch.tensor(y_eval)
 
+#学習用実データ
 X = df.iloc[0:150,[0,1,2,3]].values 
 X_train = np.empty((120, 4)) 
 X_test = np.empty((30, 4))
-# y_train = torch.empty(120)
-# y_test = np.empty(30)
-
-# y_train = np.empty((120,3))
-# y_test = np.empty((30,3))
+#学習,評価実データ
 X_train[:40],X_train[40:80],X_train[80:120] = X[:40],X[50:90],X[100:140]
 X_test[:10],X_test[10:20],X_test[20:] = X[40:50],X[90:100], X[140:]
-#7/20(ラベルがなぜかダウンロードから作れないので自作)
-# y_train[:40],y_train[40:80],y_train[80:120] = y_label[:40],y_label[50:90],y_label[100:140]
-# y_test[:10],y_test[10:20],y_test[20:] = y_label[40:50],y_label[90:100],y_label[140:]
-
-# print(y_test) #ok
-# print(X_train.shape) #120×4
 
 #encoding
 def Spike_train_converter(inputs, dt, time, time_step, fr = 30, norm = 10): #time = data_num, time_step = rate spike time
@@ -117,8 +66,6 @@ state_converted_train = np.empty((120,100,4))
 state_converted_eval = np.empty((30,100,4))
 label_train = torch.empty((120))
 label_eval = np.empty(30)
-# label_train = np.empty((120,3))
-# label_eval = np.empty((30,3))
 
 #今は学習用しかやってないけど、評価用データもスパイク信号に置き換える(edited 6/18)
 for time in range(len(X_train)):
@@ -130,10 +77,6 @@ for time_ in range(len(X_test)):
 #spike_datasets
 state_converted_train = torch.from_numpy(state_converted_train).float() #時系列入力スパイク (120,100,4)
 state_converted_eval = torch.from_numpy(state_converted_eval).float() #時系列スパイク (30,100,4)
-# label_train = torch.from_numpy(label_train) #教師ラベル (120,3)
-# label_eval = torch.from_numpy(label_eval)
-# print(torch.sum(state_converted_eval,dim=1)) #ok
-# print(label_train)
 
 #訓練データの表示###################################################################################################################################
 
@@ -205,11 +148,11 @@ class SNN(nn.Module):
         super().__init__()
         
 parser = argparse.ArgumentParser()
-parser.add_argument('--batch','-b',type=int, default=120)#batch_learning DON'T CHANGE!
+parser.add_argument('--batch','-b',type=int, default=120)# DON'T CHANGE!
 parser.add_argument('--out_shape','-o',type=int, default=False)
-parser.add_argument('--epoch','-e',type=int, default=100) #epoch 
-parser.add_argument('--power','-p',type=int, default = False) #power consumption #NO FUNCTION 
-parser.add_argument('--num_time', '-t',type=int,default=100) #一つのデータを何ステップに分けてエンコーディングするか=スパイクの観測時間 DON'T CHANGE!
+parser.add_argument('--epoch','-e',type=int, default=100) #Epoch 
+parser.add_argument('--power','-p',type=int, default = False) #power consumption
+parser.add_argument('--num_time', '-t',type=int,default=100) #一つのデータを何ステップに分けてエンコーディングするか=スパイクの観測時間
 args = parser.parse_args()
 
 device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu') # No need to use GPU
@@ -218,8 +161,8 @@ SNN_model = network.SNN_Net(num_time=args.num_time, l_tau=0.8,power=args.power,b
 SNN_model = SNN_model.to(device)
 
 print("学習スタート")
-
-optimizer = optim.Adam(SNN_model.parameters(),lr = 1e-4) #learning rate why Adam?, else SGD
+print(SNN_model)
+optimizer = optim.Adam(SNN_model.parameters(),lr = 1e-3) #learning rate why Adam?, else SGD
 epochs = args.epoch
 
 for epoch in tqdm(range(epochs)):
@@ -227,16 +170,8 @@ for epoch in tqdm(range(epochs)):
     local_loss = []
     local_accuracy = []
     print('EPOCH',epoch)
-    #modelを保存する
-    if epoch == 0:
-        torch.save(SNN_model.state_dict(), 'iris_models_state_dict_'+str(epoch)+'epochs.pth')
-        print('success model saving')
         
     with tqdm(total=len(state_converted_train),desc=f'Epoch{epoch+1}/{epochs}',unit='img')as pbar:
-        
-        total_spike_per_epoch = torch.empty((3,3))
-        total_spike_per_epoch_all = torch.empty((120,3))
-        sum_spikes_per_epoch = 0
     
         # for i, (inputs_data,labels) in enumerate(X_train,0): #cannnot use enumrate function because of concatenation of inputs and labels were impossible
         for i in range(120):
@@ -245,11 +180,11 @@ for epoch in tqdm(range(epochs)):
             
             inputs_data = state_converted_train[i]
             labels = y_train[i]
-            optimizer.zero_grad()
             inputs_data = inputs_data.to(device)
-            # labels = labels.to(device)
-            # print(labels,i)
-            # print('#####3')
+            labels = labels.to(device)
+            # print(inputs_data)
+            # print(inputs_data[:,0])
+            # exit()
 
             if args.power: # add this function later
                 pass
@@ -257,39 +192,87 @@ for epoch in tqdm(range(epochs)):
             else:
                 #requirements
                 # spike_num,s_spike,loss = SNN_model(inputs_data,labels) #loss cant be None
-                spike_num,label,loss,accuracy = SNN_model(inputs_data,labels) 
+                membrane,th,sp = SNN_model(inputs_data,labels) 
+                # spike_num,label,loss = SNN_model(inputs_data,labels) 
+            # print(spike_num)
+            membrane= membrane.detach().numpy()
+            sp = sp.detach().numpy()
+        
+            # print(th)
+            # print(sp)
+            # print(membrane[:,0])
+            # exit()
+
+            if i == 0:
+                plt.figure(figsize=(6,6))
+                plt.subplot(3,3,1)
+                plt.title("input-neurons")
+                plt.plot(inputs_data[:,0])
+                plt.ylabel("Input-1")
+
+                plt.subplot(3,3,4)
+                plt.plot(inputs_data[:,1])
+                plt.ylabel("Input-2")
+
+                plt.subplot(3,3,7)
+                plt.plot(inputs_data[:,2])
+                plt.ylabel("Input-3")
+                plt.xlabel("Time (ms)")
+
+                # plt.subplot(4,2,7)
+                # plt.plot(inputs_data[:,3])
+                # plt.ylabel("Input-4")
+
+                plt.subplot(3,3,2)
+                plt.title("Membrane potential")
+                plt.plot(membrane[:,0])
+                plt.ylabel('Mem1')
+
+                plt.subplot(3,3,5)
+                plt.plot(membrane[:,1])
+                plt.ylabel("Mem2")
+
+                plt.subplot(3,3,8)
+                plt.plot(membrane[:,2])
+                plt.ylabel("Mem3")
+                plt.xlabel("Time (ms)")
+
+                plt.subplot(3,3,3)
+                plt.title("output spikes")
+                plt.plot(sp[:,0])
+                plt.ylabel("spike-1")
+
+                plt.subplot(3,3,6)
+                plt.plot(sp[:,1])
+                plt.ylabel("spike-2")
+
+                plt.subplot(3,3,9)
+                plt.plot(sp[:,2])
+                plt.ylabel("spike-3")
+                plt.xlabel("Time (ms)")
+                plt.show()
             # print(spike_num)
             # print(losse)
-            
-            total_spike_per_epoch_all[i] = spike_num#spike_num = [y1,y2,y3] < 100
-            if i == 39: #input last for each data
-                total_spike_per_epoch[0] = spike_num 
-            elif i == 79:
-                total_spike_per_epoch[1] = spike_num
-            else:
-                total_spike_per_epoch[2] = spike_num
                 
             loss.backward()
             running_loss += loss.item()
             local_loss.append(loss.item())
-            local_accuracy.append(accuracy)
+            optimizer.step()
+            optimizer.zero_grad()
+            # local_accuracy.append(accuracy)
             # print(loss)
-            
 
-            # if i % 100 == 99:
             if i == 119:
-                print('[{:d}, {:5d}] loss: {:.3f} accuracy: {:.2f}%'
-                            .format(epoch + 1, i + 1, running_loss / 120, 100*sum(local_accuracy)/len(local_accuracy)))
-                print('The total spikes are')
-                # print(total_spike_per_epoch_all)
+                print('[{:d}, {:5d}] loss: {:.3f}'
+                            .format(epoch + 1, i + 1, running_loss / 120))
+                # print('[{:d}, {:5d}] loss: {:.3f} accuracy: {:.2f}%'
+                #             .format(epoch + 1, i + 1, running_loss / 120, 100*sum(local_accuracy)/len(local_accuracy)))
                 print('Epoch' + str(epoch+1) +"だよ")
+                print(spike_num)
                 running_loss = 0.0
                 
-                optimizer.step()
-            # print('One epoch done')
-    # print('epoch' + str(epoch) + 'done')
             
-    print('ok') #learning is over
+    print('ok')
 
     # evaluation
     # Needs softmax function in order to evaluate
