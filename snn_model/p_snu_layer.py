@@ -31,7 +31,7 @@ class P_SNU(nn.Module):
             device=torch.device("cpu")
             
         self.input_current = nn.Linear(input_neuron,output_neuron,bias=False).to(device) #入力スパイク列、出力スパイク列
-        torch.manual_seed(1)
+        torch.manual_seed(0)
         torch.nn.init.xavier_uniform_(self.input_current.weight)
         #torch.nn.init.constant_(self.input_current.weight, 0.5)
         

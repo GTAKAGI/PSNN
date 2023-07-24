@@ -66,12 +66,12 @@ class SNN_Net(torch.nn.Module):
             
             #4→4→3(network)
             spike_encoded_neuron = x[time]
-            #h1 = self.l1(spike_encoded_neuron)
-            #h2 = self.l2(h1)
-            #out = self.l3(h2)
+            h1 = self.l1(spike_encoded_neuron)
+            h2 = self.l2(h1)
+            out = self.l3(h2)
             
             # 1 layer test 
-            out = self.l4(spike_encoded_neuron)
+            # out = self.l4(spike_encoded_neuron)
             
             # out = self.l3(h2)[0]
             
@@ -87,11 +87,11 @@ class SNN_Net(torch.nn.Module):
         #バッチ学習の場合
         criterion = nn.CrossEntropyLoss()
         losse = criterion(sum_out,y)
-        predicted_label = sum_out.argmax()
-        accuracy = 1 if predicted_label == y else 0
+        # predicted_label = sum_out.argmax()
+        # accuracy = 1 if predicted_label == y else 0
         # accuracy = out/y
         
         # criterion = nn.MSELoss()
         # loss = criterion(out,y)
         
-        return sum_out,None,losse,accuracy
+        return sum_out,y
