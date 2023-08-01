@@ -56,8 +56,8 @@ class P_SNU(nn.Module):
             dtype = torch.float
             device=torch.device("cpu")
         
-        self.s = torch.zeros((1, 3),device=device,dtype=dtype)
-        self.y = torch.zeros((1, 3),device=device,dtype=dtype)
+        self.s = torch.zeros((1, self.output_neuron),device=device,dtype=dtype)
+        self.y = torch.zeros((1, self.output_neuron),device=device,dtype=dtype)
         # self.y = torch.zeros((shape[0], self.output_neuron),device=device,dtype=dtype)
     
     def forward(self,x):
@@ -70,15 +70,22 @@ class P_SNU(nn.Module):
             self.s = torch.from_numpy(self.s.astype(np.float32)).clone()
         #snu absで学習進める
         s = abs(self.input_current(x)) + self.s*(1 - self.y)
-        # s = F.elu(self.input_current(x) + self.s*(1 - self.y))
+        
+        #入力電流が入ったときにdecayのような現象が生じていた
+        # s = (self.input_current(x) + self.s*(1 - self.y))
+        
+        #熱光学効果ver
         #s = F.elu(abs(self.input_current(x)) + self.l_tau * self.s * (1 - self.y))
         bias = self.b + s
+        # bias = self.b
         y = step_func.spike_fn(bias)
         
         self.s = s
         self.y = y
         #P-snu decayを排除
         # s = F.elu(self.input_current(x) + self.s*(1 - self.y))
-    
-        return s,bias,y#spike emission
-        # return y,s,x
+        
+        #膜電位と入出力の確認
+        # return s,bias,y
+        
+        return y,s,self.input_current(x)

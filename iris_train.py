@@ -177,7 +177,7 @@ SNN_model = network.SNN_Net(num_time=args.num_time, l_tau=0.8, power=args.power,
 SNN_model = SNN_model.to(device)
 
 print("学習スタート")
-print(SNN_model)
+# print(SNN_model)
 # learning rate why Adam?, else SGD
 optimizer = optim.Adam(SNN_model.parameters(), lr=1e-3)
 epochs = args.epoch
@@ -188,7 +188,7 @@ for epoch in tqdm(range(epochs)):
     local_accuracy = []
     print('EPOCH',epoch)
         
-    with tqdm(total=len(state_converted_train),desc=f'Epoch{epoch+1}/{epochs}',unit='img')as pbar:
+    with tqdm(total=len(state_converted_train),desc=f'Epoch{epoch+1}/{epochs}',unit='img') as pbar:
     
         # for i, (inputs_data,labels) in enumerate(X_train,0): #cannnot use enumrate function because of concatenation of inputs and labels were impossible
         for i in range(120):
@@ -207,85 +207,128 @@ for epoch in tqdm(range(epochs)):
                 pass
 
             else:
-                # requirements
-                # spike_num,s_spike,loss = SNN_model(inputs_data,labels) #loss cant be None
-                membrane,th,sp = SNN_model(inputs_data,labels) 
-                # spike_num,label,loss = SNN_model(inputs_data,labels) 
-            # print(spike_num)
-            membrane= membrane.detach().numpy()
-            sp = sp.detach().numpy()
+                # outputs
+                pi1,pi2 = SNN_model(inputs_data,labels) 
+                # spike_num,loss,accu = SNN_model(inputs_data,labels)
+            # print(accu)
+            #膜電位の状態を確認する 
+            # membrane= membrane.detach().numpy()
+            pi1 = pi1.detach().numpy()
+            pi2 = pi2.detach().numpy()
         
-            # print(th)
+            # print(pi)
+            # print(ll)
+            # exit()
+            
             # print(sp)
             # print(membrane[:,0])
             # exit()
-
             if i == 0:
                 plt.figure(figsize=(6,6))
-                plt.subplot(3,3,1)
-                plt.title("input-neurons")
-                plt.plot(inputs_data[:,0])
-                plt.ylabel("Input-1")
-
-                plt.subplot(3,3,4)
-                plt.plot(inputs_data[:,1])
-                plt.ylabel("Input-2")
-
-                plt.subplot(3,3,7)
-                plt.plot(inputs_data[:,2])
-                plt.ylabel("Input-3")
-                plt.xlabel("Time (ms)")
-
-                # plt.subplot(4,2,7)
-                # plt.plot(inputs_data[:,3])
-                # plt.ylabel("Input-4")
-
-                plt.subplot(3,3,2)
-                plt.title("Membrane potential")
-                plt.plot(membrane[:,0])
-                plt.ylabel('Mem1')
-
-                plt.subplot(3,3,5)
-                plt.plot(membrane[:,1])
-                plt.ylabel("Mem2")
-
-                plt.subplot(3,3,8)
-                plt.plot(membrane[:,2])
-                plt.ylabel("Mem3")
-                plt.xlabel("Time (ms)")
-
-                plt.subplot(3,3,3)
-                plt.title("output spikes")
-                plt.plot(sp[:,0])
-                plt.ylabel("spike-1")
-
-                plt.subplot(3,3,6)
-                plt.plot(sp[:,1])
-                plt.ylabel("spike-2")
-
-                plt.subplot(3,3,9)
-                plt.plot(sp[:,2])
-                plt.ylabel("spike-3")
-                plt.xlabel("Time (ms)")
+                plt.subplot(4,2,1)
+                plt.title("lay1-mem")
+                plt.plot(pi1[:,0])
+                plt.ylabel("mem1")
+                
+                plt.subplot(4,2,3)
+                plt.plot(pi1[:,1])
+                plt.ylabel("mem2")
+                
+                plt.subplot(4,2,5)
+                plt.plot(pi1[:,2])
+                plt.ylabel("mem3")
+                
+                plt.subplot(4,2,7)
+                plt.plot(pi1[:,3])
+                plt.ylabel("mem4")
+                
+                plt.subplot(4,2,2)
+                plt.title('lay2-mem')
+                plt.plot(pi2[:,0])
+                plt.ylabel("mem1")
+                
+                plt.subplot(4,2,4)
+                plt.plot(pi2[:,1])
+                plt.ylabel("mem2")
+                
+                plt.subplot(4,2,6)
+                plt.plot(pi2[:,2])
+                plt.ylabel("mem3")
+                
+                plt.subplot(4,2,8)
+                plt.plot(pi2[:,3])
+                plt.ylabel("mem4")
+                
                 plt.show()
+            #########################SNUの入出力確認+膜電位###############################
+            # if i == 0:
+            #     plt.figure(figsize=(6,6))
+            #     plt.subplot(3,3,1)
+            #     plt.title("input-neurons")
+            #     plt.plot(inputs_data[:,0])
+            #     plt.ylabel("Input-1")
+
+            #     plt.subplot(3,3,4)
+            #     plt.plot(inputs_data[:,1])
+            #     plt.ylabel("Input-2")
+
+            #     plt.subplot(3,3,7)
+            #     plt.plot(inputs_data[:,2])
+            #     plt.ylabel("Input-3")
+            #     plt.xlabel("Time (ms)")
+
+            #     # plt.subplot(4,2,7)
+            #     # plt.plot(inputs_data[:,3])
+            #     # plt.ylabel("Input-4")
+
+            #     plt.subplot(3,3,2)
+            #     plt.title("Membrane potential")
+            #     plt.plot(membrane[:,0])
+            #     plt.ylabel('Mem1')
+
+            #     plt.subplot(3,3,5)
+            #     plt.plot(membrane[:,1])
+            #     plt.ylabel("Mem2")
+
+            #     plt.subplot(3,3,8)
+            #     plt.plot(membrane[:,2])
+            #     plt.ylabel("Mem3")
+            #     plt.xlabel("Time (ms)")
+
+            #     plt.subplot(3,3,3)
+            #     plt.title("output spikes")
+            #     plt.plot(sp[:,0])
+            #     plt.ylabel("spike-1")
+
+            #     plt.subplot(3,3,6)
+            #     plt.plot(sp[:,1])
+            #     plt.ylabel("spike-2")
+
+            #     plt.subplot(3,3,9)
+            #     plt.plot(sp[:,2])
+            #     plt.ylabel("spike-3")
+            #     plt.xlabel("Time (ms)")
+            #     plt.show()
+            #################################################################
+                
             # print(spike_num)
             # print(losse)
                 
-            loss.backward()
-            running_loss += loss.item()
-            local_loss.append(loss.item())
-            optimizer.step()
-            optimizer.zero_grad()
-            # local_accuracy.append(accuracy)
+            # loss.backward()
+            # running_loss += loss.item()
+            # local_loss.append(loss.item())
+            # optimizer.step()
+            # optimizer.zero_grad()
+            # local_accuracy.append(accu)
             # print(loss)
 
             if i == 119:
-                print('[{:d}, {:5d}] loss: {:.3f}'
-                            .format(epoch + 1, i + 1, running_loss / 120))
-                # print('[{:d}, {:5d}] loss: {:.3f} accuracy: {:.2f}%'
-                #             .format(epoch + 1, i + 1, running_loss / 120, 100*sum(local_accuracy)/len(local_accuracy)))
-                print('Epoch' + str(epoch+1) +"だよ")
-                print(spike_num)
+                # print(local_accuracy)
+                # print('[{:d}, {:5d}] loss: {:.3f}'
+                #             .format(epoch + 1, i + 1, running_loss / 120))
+                print('[{:d}, {:5d}] loss: {:.3f} accuracy: {:.2f}%'
+                            .format(epoch + 1, i + 1, running_loss / 120, 100*sum(local_accuracy)/len(local_accuracy)))
+                print('This is Epoch' + str(epoch+1))
                 running_loss = 0.0
                 
             
@@ -301,5 +344,5 @@ for epoch in tqdm(range(epochs)):
     #         loss, accuracy = SNN_model(inputs_data,labels)
 
 
-torch.save(SNN_model.state_dict(), 'snn_model/spike_iris_model_key.pth')
+torch.save(SNN_model.state_dict(), 'snn_model/spike_iris_model_snn.pth')
 print('success model saving')
