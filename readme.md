@@ -14,7 +14,9 @@
 ## 1-2 . Structure of encoding inputs
 + ## input static data are converted into time-series data
 1. input data (static) 4×150
-2. input data (spikes) 4×100×150 
+2. input data (spikes) 4×100×150
+※ 100 is total time
+
 
 
 ![image](https://github.com/GTAKAGI/PSNN/assets/114473358/09e9da5c-1586-4a5f-8e69-efed0b1a27eb)
